@@ -54,8 +54,59 @@ exports.createSubSection = aysnc(req,res)=>{
 
 
 //Update subSection
+exports.updateSubSection=async(req,res)=>{
+    try {
+        // fetch data from req body
+        const {title,description,timeDuration,videoUrl,sectionId}=req.body;
+        // validate data
+        if(!title || !description || !timeDuration || !videoUrl || !sectionId){
+            return res.status(400).json({
+                success:false,
+                message:"Please fill all the fields",
+                });
+                }
+                // update the subSection
+                const updatedSubSection=await SubSection.findByIdAndUpdate({_id:req.params.id}, 
+                    {
+                        title:title,
+                        timeDuration:timeDuration,
+                        description:description,
+                        videoUrl:videoUrl,
+                        },
+                        {new:true},
+                        );
 
+                          //return res
+        return res.status(200).json({
+            success:true,
+            message:"SubSection is updated successfully"
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success:false,
+            message:"Unable to update  SubSection, please try again",
+            error:error.message,
+        });
+    }
+}
 
 
 // delete SubSection
-
+exports.deleteSection=async(req,res)=>{
+    try {
+        //get id from req body
+        const subSection=await SubSection.findByIdAndDelete({_id:req.params.id}); 
+       
+        //return response
+        return res.status(200).json({
+            success:true,
+            message:"Section is delete successfully"
+        })
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Unable to delete Section, please try again",
+            error: error.message
+          });
+    }
+}
