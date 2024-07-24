@@ -52,7 +52,7 @@ exports.createSubSection = aysnc(req,res)=>{
 }
 
 
-
+ // this doing by me 
 //Update subSection
 exports.updateSubSection=async(req,res)=>{
     try {
@@ -100,12 +100,12 @@ exports.deleteSection=async(req,res)=>{
         //return response
         return res.status(200).json({
             success:true,
-            message:"Section is delete successfully"
+            message:"SubSection is delete successfully"
         })
     } catch (error) {
         return res.status(500).json({
             success: false,
-            message: "Unable to delete Section, please try again",
+            message: "Unable to delete SubSection, please try again",
             error: error.message
           });
     }
