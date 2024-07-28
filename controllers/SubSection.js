@@ -1,112 +1,131 @@
-const SubSection =require("../models/SubSection");
+// Import necessary modules
 const Section = require("../models/Section");
+const SubSection = require("../models/Subsection");
 const { uploadImageToCloudinary } = require("../utils/imageUploader");
 
-exports.createSubSection = aysnc(req,res)=>{
+  // Create a new sub-section for a given section
+exports.createSubSection = async (req, res) => {
     try {
-        // fetch data from req body
-        const { sectionId,title,description,timeDuration}=req.body;
-        // get videourl
-        const videoUrl=req.files.videoFile;
-        // validate
-        if(!videoUrl || !sectionId || !title || !description || !timeDuration){
-            return res.status(400).json({
-                succcess:true,
-              message:"All Fields are Required"
-            });
+      // Extract necessary information from the request body
+      const { sectionId, title, description } = req.body
+      const video = req.files.video
+  
+      // Check if all necessary fields are provided
+      if (!sectionId || !title || !description || !video) {
+        return res
+          .status(404)
+          .json({ success: false, message: "All Fields are Required" })
+      }
+      console.log(video)
+  
+      // Upload the video file to Cloudinary
+      const uploadDetails = await uploadImageToCloudinary(
+        video,
+        process.env.FOLDER_NAME
+      )
+      console.log(uploadDetails)
+      // Create a new sub-section with the necessary information
+      const SubSectionDetails = await SubSection.create({
+        title: title,
+        timeDuration: `${uploadDetails.duration}`,
+        description: description,
+        videoUrl: uploadDetails.secure_url,
+      })
+  
+      // Update the corresponding section with the newly created sub-section
+      const updatedSection = await Section.findByIdAndUpdate(
+        { _id: sectionId },
+        { $push: { subSection: SubSectionDetails._id } },
+        { new: true }
+      ).populate("subSection")
+  
+      // Return the updated section in the response
+      return res.status(200).json({ success: true, data: updatedSection })
+    } catch (error) {
+      // Handle any errors that may occur during the process
+      console.error("Error creating new sub-section:", error)
+         return res.status(500).json({
+        success: false,
+        message: "Internal server error",
+        error: error.message,
+      })
+    }
+  }
+
+
+  
+exports.updateSubSection = async (req, res) => {
+    try {
+      const { sectionId, title, description } = req.body
+      const subSection = await SubSection.findById(sectionId)
+  
+      if (!subSection) {
+        return res.status(404).json({
+          success: false,
+          message: "SubSection not found",
+        })
+      }
+  
+      if (title !== undefined) {
+        subSection.title = title
+      }
+  
+      if (description !== undefined) {
+        subSection.description = description
+      }
+      if (req.files && req.files.video !== undefined) {
+        const video = req.files.video
+        const uploadDetails = await uploadImageToCloudinary(
+          video,
+          process.env.FOLDER_NAME
+        )
+        subSection.videoUrl = uploadDetails.secure_url
+        subSection.timeDuration = `${uploadDetails.duration}`
+      }
+  
+      await subSection.save()
+  
+      return res.json({
+        success: true,
+        message: "Section updated successfully",
+      })
+    } catch (error) {
+      console.error(error)
+      return res.status(500).json({
+        success: false,
+        message: "An error occurred while updating the section",
+      })
+    }
+  }
+  
+  exports.deleteSubSection = async (req, res) => {
+    try {
+      const { subSectionId, sectionId } = req.body
+      await Section.findByIdAndUpdate(
+        { _id: sectionId },
+        {
+          $pull: {
+            subSection: subSectionId,
+          },
         }
-        // upload  video to cloudinary
-          
-        const uploadDetails=await uploadImageToCloudinary(video,process.env.FOLDER_NAME);
-        // create a sub section
-        const subSectionDetails =await SubSection.create({
-            title:title,
-            timeDuration:timeDuration,
-            description: description,
-            videoUrl:uploadDetails.secure_url,
-        })
-
-        // update section with this section objectid 
-        const updatedSection =await Section.findByIdAndUpdate({_id:sectionId},
-            {
-            $push:{
-                subSection:sectionId,
-            }
-        },
-        {new :true}
-    );
-    //HW: log updated section here, after adding populate query
-            //return response
-            return res.status(200).json({
-                succcess:true,
-                message:'Sub Section Created Successfully',
-                updatedSection,
-            });
+      )
+      const subSection = await SubSection.findByIdAndDelete({ _id: subSectionId })
+  
+      if (!subSection) {
+        return res
+          .status(404)
+          .json({ success: false, message: "SubSection not found" })
+      }
+  
+      return res.json({
+        success: true,
+        message: "SubSection deleted successfully",
+      })
     } catch (error) {
-        return res.status(500).json({
-            success:false,
-            message:"Internal Server Error",
-            error:error.message,
-        })
+      console.error(error)
+      return res.status(500).json({
+        success: false,
+        message: "An error occurred while deleting the SubSection",
+      })
     }
-}
-
-
- // this doing by me 
-//Update subSection
-exports.updateSubSection=async(req,res)=>{
-    try {
-        // fetch data from req body
-        const {title,description,timeDuration,videoUrl,sectionId}=req.body;
-        // validate data
-        if(!title || !description || !timeDuration || !videoUrl || !sectionId){
-            return res.status(400).json({
-                success:false,
-                message:"Please fill all the fields",
-                });
-                }
-                // update the subSection
-                const updatedSubSection=await SubSection.findByIdAndUpdate({_id:req.params.id}, 
-                    {
-                        title:title,
-                        timeDuration:timeDuration,
-                        description:description,
-                        videoUrl:videoUrl,
-                        },
-                        {new:true},
-                        );
-
-                          //return res
-        return res.status(200).json({
-            success:true,
-            message:"SubSection is updated successfully"
-        });
-    } catch (error) {
-        return res.status(500).json({
-            success:false,
-            message:"Unable to update  SubSection, please try again",
-            error:error.message,
-        });
-    }
-}
-
-
-// delete SubSection
-exports.deleteSection=async(req,res)=>{
-    try {
-        //get id from req body
-        const subSection=await SubSection.findByIdAndDelete({_id:req.params.id}); 
-       
-        //return response
-        return res.status(200).json({
-            success:true,
-            message:"SubSection is delete successfully"
-        })
-    } catch (error) {
-        return res.status(500).json({
-            success: false,
-            message: "Unable to delete SubSection, please try again",
-            error: error.message
-          });
-    }
-}
+  }
